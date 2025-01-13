@@ -1,17 +1,19 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "./config";
 
-export function middleware(req: Request, res: Response) {
+export function middleware(req: Request, res: Response, next: NextFunction ) {
   const token = req.headers["authorization"] ?? "";
 
-  const decoded = jwt.verify(token, "secret");
+  const decoded = jwt.verify(token, JWT_SECRET);
 
   if (decoded) {
     // @ts-ignore
-    req.userid = decoded.userid;
+    req.userId = decoded.userId;
+    next();
 
   } else {
-    res.status(401).send({
+    res.status(403).json({
       message: "Unauthorized",
     });
   }

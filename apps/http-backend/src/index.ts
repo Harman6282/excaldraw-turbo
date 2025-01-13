@@ -1,31 +1,36 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import { middleware } from "./middleware";
+import { JWT_SECRET } from "./config";
 
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Hello from http-backend");
+app.post("/signup", (req, res) => {
+  res.send("signup route");
+
+  res.json({
+    userId: 123
+  })
 });
 
-app.post("/signin", middleware , async (req, res) => {
+
+app.post("/signin", middleware, async (req, res) => {
   res.send("signin route");
 
-  const userid = 234324;
+  const userId = 234324;
 
-  const token = await jwt.sign({ userid }, "secret");
+  const token = await jwt.sign({ userId }, JWT_SECRET);
 
   res.json({
     token,
   });
 });
 
-app.post("/signup", (req, res) => {
-  res.send("signup route");
-});
 
-app.post("/create-room", (req, res) => {
-  res.send("create room route");
+app.post("/room",middleware, (req, res) => {
+  res.json({
+      roomId: 123
+  });
 });
 
 app.listen(3004, () => {
