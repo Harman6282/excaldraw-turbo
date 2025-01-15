@@ -54,20 +54,19 @@ app.post("/signin", async (req, res) => {
   }
 
   // todo compare the password using bcrypt
-  
+
   const user = await prismaClient.user.findUnique({
     where: {
       email: data.data.username,
       password: data.data.password,
     },
   });
-  
+
   const token = await jwt.sign({ userId: user?.id }, JWT_SECRET);
   if (!user) {
     res.status(400).json({ message: "Not authorized" });
     return;
   }
-
 
   res.json({
     token,
@@ -103,7 +102,6 @@ app.post("/room", middleware, async (req, res) => {
     res.json({
       roomId: room.id,
     });
-    
   } catch (error) {
     res.json({
       message: "Room already exists",
