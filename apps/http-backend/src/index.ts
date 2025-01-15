@@ -2,59 +2,115 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { middleware } from "./middleware";
 import { JWT_SECRET } from "@repo/backend-common/config";
-import {CreateUserSchema, SigninSchema, CreateRoomSchema} from "@repo/common/types";
+import {
+  CreateUserSchema,
+  SigninSchema,
+  CreateRoomSchema,
+} from "@repo/common/types";
+import { prismaClient } from "@repo/db/client";
 
 const app = express();
 
-app.post("/signup", (req, res) => {
- 
-  const data = CreateUserSchema.safeParse(req.body);
-  if(!data.success){
-   res.json({
-      message: "Incorrect input"
-    })
+app.use(express.json());
+
+app.post("/signup", async (req, res) => {
+  const parsedData = CreateUserSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res.json({
+      message: "Incorrect input",
+    });
     return;
   }
 
+  try {
+    // todo hash the password using bcrypt
+    const user = await prismaClient.user.create({
+      data: {
+        name: parsedData.data?.name,
+        email: parsedData.data.username,
+        password: parsedData.data.password,
+      },
+    });
+
+    res.json({
+      userId: user.id,
+    });
+  } catch (error) {
+    res.status(400).json({ message: "User already exists with this username" });
+  }
 
   res.json({
-    userId: 123
-  })
+    userId: 123,
+  });
 });
 
-
-app.post("/signin", middleware, async (req, res) => {
+app.post("/signin", async (req, res) => {
   const data = SigninSchema.safeParse(req.body);
-  if(!data.success){
-   res.json({
-      message: "Incorrect input"
-    })
+  if (!data.success) {
+    res.json({
+      message: "Incorrect input",
+    });
     return;
   }
-  const userId = 234324;
 
-  const token = await jwt.sign({ userId }, JWT_SECRET);
+  // todo compare the password using bcrypt
+  
+  const user = await prismaClient.user.findUnique({
+    where: {
+      email: data.data.username,
+      password: data.data.password,
+    },
+  });
+  
+  const token = await jwt.sign({ userId: user?.id }, JWT_SECRET);
+  if (!user) {
+    res.status(400).json({ message: "Not authorized" });
+    return;
+  }
+
 
   res.json({
     token,
   });
 });
 
-
-app.post("/room",middleware, (req, res) => {
-  const data = CreateRoomSchema.safeParse(req.body);
-  if(!data.success){
-   res.json({
-      message: "Incorrect input"
-    })
+app.post("/room", middleware, async (req, res) => {
+  const parsedData = CreateRoomSchema.safeParse(req.body);
+  if (!parsedData.success) {
+    res.json({
+      message: "Incorrect input",
+    });
     return;
   }
 
-  res.json({
-      roomId: 123
-  });
+  const userId = req.userId;
+
+  if (!parsedData.data.name || !userId) {
+    res.json({
+      message: "Incorrect input",
+    });
+    return;
+  }
+
+  try {
+    const room = await prismaClient.room.create({
+      data: {
+        slug: parsedData.data.name,
+        adminId: userId,
+      },
+    });
+
+    res.json({
+      roomId: room.id,
+    });
+    
+  } catch (error) {
+    res.json({
+      message: "Room already exists",
+    });
+  }
 });
 
-app.listen(3004, () => {
-  console.log("http-backend listening on port 3000");
+app.listen(3002, () => {
+  console.log("http-backend listening on port 3004");
 });
